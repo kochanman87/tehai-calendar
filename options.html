@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>手配カレンダー 設定</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div id="container">
+    <h1>手配カレンダー 設定</h1>
+
+    <div id="tab-nav">
+      <button class="tab-btn active" data-tab="holidays">カスタム休日</button>
+      <button class="tab-btn" data-tab="no-delivery">納品NG日</button>
+    </div>
+
+    <section id="tab-holidays" class="tab-content active">
+      <p class="desc">リードタイムの計算に含めない日を追加できます。</p>
+      <div class="add-form">
+        <div class="date-range">
+          <input type="date" id="date-input-holidays" class="date-input">
+          <span class="range-separator">～</span>
+          <input type="date" id="end-date-input-holidays" class="date-input end-date-input" title="終了日（範囲指定する場合）">
+        </div>
+        <input type="text" id="label-input-holidays" placeholder="メモ（任意）" maxlength="30" class="label-input">
+        <label class="yearly-check">
+          <input type="checkbox" id="yearly-check-holidays">
+          <span>毎年</span>
+        </label>
+        <button id="add-btn-holidays" class="add-btn">追加</button>
+      </div>
+      <div id="holiday-list"></div>
+      <p id="empty-msg-holidays" class="empty-msg hidden">カスタム休日はまだ登録されていません。</p>
+    </section>
+
+    <section id="tab-no-delivery" class="tab-content">
+      <p class="desc">リードタイムには数えますが、納品ができない日を登録できます。カレンダー上でグレー表示されます。</p>
+      <div class="add-form">
+        <div class="date-range">
+          <input type="date" id="date-input-no-delivery" class="date-input">
+          <span class="range-separator">～</span>
+          <input type="date" id="end-date-input-no-delivery" class="date-input end-date-input" title="終了日（範囲指定する場合）">
+        </div>
+        <input type="text" id="label-input-no-delivery" placeholder="メモ（任意）" maxlength="30" class="label-input">
+        <label class="yearly-check">
+          <input type="checkbox" id="yearly-check-no-delivery">
+          <span>毎年</span>
+        </label>
+        <button id="add-btn-no-delivery" class="add-btn add-btn-gray">追加</button>
+      </div>
+      <div id="no-delivery-list"></div>
+      <p id="empty-msg-no-delivery" class="empty-msg hidden">納品NG日はまだ登録されていません。</p>
+    </section>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>

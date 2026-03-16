@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>手配カレンダー</title>
+  <link rel="stylesheet" href="newtab.css">
+</head>
+<body>
+  <div id="app">
+    <div id="seiban-panel" class="side-panel">
+      <h3>製番</h3>
+      <div id="seiban-list"></div>
+      <div class="panel-input">
+        <input type="text" id="seiban-label" placeholder="品名">
+        <input type="text" id="seiban-value" placeholder="製番">
+        <button id="seiban-add">追加</button>
+      </div>
+    </div>
+
+    <div id="calendar">
+      <header id="cal-header">
+        <button id="prev-month" aria-label="前月">◀</button>
+        <h2 id="month-title"></h2>
+        <button id="today-btn">今日</button>
+        <button id="next-month" aria-label="翌月">▶</button>
+      </header>
+      <div id="weekday-header"></div>
+      <div id="cal-grid"></div>
+    </div>
+
+    <div id="supplier-panel" class="side-panel">
+      <h3>手配先</h3>
+      <div id="supplier-list"></div>
+      <div class="panel-input">
+        <input type="text" id="supplier-code" placeholder="コード">
+        <input type="text" id="supplier-name" placeholder="企業名">
+        <button id="supplier-add">追加</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="copy-tooltip" class="hidden"></div>
+  <script src="holidays.js"></script>
+  <script src="newtab.js"></script>
+</body>
+</html>

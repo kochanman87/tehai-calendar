@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "手配カレンダー",
+  "version": "2.0.0",
+  "description": "手配品の納期リードタイムを営業日数で表示するカレンダー",
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://holidays-jp.github.io/*"
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
