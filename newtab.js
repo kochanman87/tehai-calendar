@@ -19,7 +19,11 @@ let seibanList = [];
 let supplierList = [];
 
 async function init() {
-  await initHolidays();
+  try {
+    await initHolidays();
+  } catch (e) {
+    console.warn('Holiday initialization failed, rendering without holiday data:', e);
+  }
 
   renderWeekdayHeader();
   renderCalendar();
@@ -42,7 +46,11 @@ async function init() {
   });
 
   // storageからデータ読み込み
-  await loadPanelData();
+  try {
+    await loadPanelData();
+  } catch (e) {
+    console.warn('Panel data loading failed:', e);
+  }
 
   // オプションページからの変更をリアルタイム反映
   if (typeof chrome !== 'undefined' && chrome.storage) {
@@ -420,4 +428,4 @@ function renderSupplierList() {
   });
 }
 
-init();
+init().catch((e) => console.error('init() failed:', e));
