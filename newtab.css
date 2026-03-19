@@ -304,6 +304,20 @@ body {
   color: rgba(255, 255, 255, 0.8);
 }
 
+/* 選択起点日 */
+.day-cell.selected {
+  background: rgba(255, 165, 0, 0.2);
+}
+
+.day-cell.selected:hover {
+  background: rgba(255, 165, 0, 0.3);
+}
+
+.day-cell.selected .lead-time {
+  color: #e67e00;
+  font-weight: bold;
+}
+
 /* 過去 */
 .day-cell.past {
   opacity: 0.4;
