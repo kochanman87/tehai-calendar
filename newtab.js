@@ -9,6 +9,8 @@ let currentYear = today.getFullYear();
 let currentMonth = today.getMonth();
 let lastWheelTime = 0;
 let tooltipTimer = null;
+let selectedDate = null; // カスタム起点日（null=今日が起点）
+let clickTimer = null; // クリック/ダブルクリック判定用
 
 const monthTitle = document.getElementById('month-title');
 const calGrid = document.getElementById('cal-grid');
@@ -119,6 +121,8 @@ function createDayCell(date, isCurrentMonth) {
 
   const dow = date.getDay();
   const isTodayDate = date.getTime() === today.getTime();
+  const origin = selectedDate || today;
+  const isOriginDate = date.getTime() === origin.getTime();
   const businessDay = isBusinessDay(date);
   const holidayName = getHolidayName(date);
   const isWeekend = dow === 0 || dow === 6;
@@ -127,9 +131,14 @@ function createDayCell(date, isCurrentMonth) {
 
   if (isTodayDate) {
     cell.classList.add('today');
-  } else if (date < today) {
+  }
+  if (selectedDate && date.getTime() === selectedDate.getTime()) {
+    cell.classList.add('selected');
+  }
+
+  if (date < origin && !isOriginDate) {
     cell.classList.add('past');
-  } else {
+  } else if (date > origin) {
     cell.classList.add('future');
   }
 
@@ -153,11 +162,11 @@ function createDayCell(date, isCurrentMonth) {
   cell.appendChild(dateNum);
 
   // リードタイム（営業日のみ表示）
-  if (businessDay || isTodayDate) {
+  if (businessDay || isOriginDate) {
     const lt = document.createElement('span');
     lt.className = 'lead-time';
-    if (isTodayDate) {
-      lt.textContent = '今日';
+    if (isOriginDate) {
+      lt.textContent = selectedDate ? '起点' : '今日';
     } else {
       const leadTime = calcBusinessDayLeadTime(date);
       lt.textContent = leadTime > 0 ? `+${leadTime}` : `${leadTime}`;
@@ -182,14 +191,15 @@ function createDayCell(date, isCurrentMonth) {
     cell.appendChild(ndl);
   }
 
-  // クリックでコピー
+  // クリックで起点変更、ダブルクリックでコピー
   cell.addEventListener('click', () => handleDateClick(date, cell));
+  cell.addEventListener('dblclick', () => handleDateDblClick(date, cell));
 
   return cell;
 }
 
 function calcBusinessDayLeadTime(targetDate) {
-  const start = new Date(today);
+  const start = new Date(selectedDate || today);
   const end = new Date(targetDate);
   start.setHours(0, 0, 0, 0);
   end.setHours(0, 0, 0, 0);
@@ -229,6 +239,7 @@ function goToNextMonth() {
 }
 
 function goToToday() {
+  selectedDate = null;
   currentYear = today.getFullYear();
   currentMonth = today.getMonth();
   renderCalendar();
@@ -245,6 +256,29 @@ function handleWheel(e) {
 }
 
 function handleDateClick(date, cellElement) {
+  // ダブルクリックとの競合回避：少し待ってから起点変更を実行
+  if (clickTimer) clearTimeout(clickTimer);
+  clickTimer = setTimeout(() => {
+    clickTimer = null;
+    const origin = selectedDate || today;
+    if (date.getTime() === origin.getTime()) {
+      // 同じ起点をクリック → 今日に戻す
+      selectedDate = null;
+    } else {
+      selectedDate = new Date(date);
+      selectedDate.setHours(0, 0, 0, 0);
+    }
+    renderCalendar();
+  }, 250);
+}
+
+function handleDateDblClick(date, cellElement) {
+  // ダブルクリック時はシングルクリック（起点変更）をキャンセル
+  if (clickTimer) {
+    clearTimeout(clickTimer);
+    clickTimer = null;
+  }
+
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const dd = String(date.getDate()).padStart(2, '0');
