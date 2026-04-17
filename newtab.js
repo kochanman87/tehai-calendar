@@ -169,7 +169,12 @@ function createDayCell(date, isCurrentMonth) {
       lt.textContent = selectedDate ? '起点' : '今日';
     } else {
       const leadTime = calcBusinessDayLeadTime(date);
-      lt.textContent = leadTime > 0 ? `+${leadTime}` : `${leadTime}`;
+      if (leadTime >= 1 && leadTime <= 10) {
+        lt.textContent = `+${leadTime}(短納期)`;
+        lt.classList.add('short-delivery');
+      } else {
+        lt.textContent = leadTime > 0 ? `+${leadTime}` : `${leadTime}`;
+      }
     }
     cell.appendChild(lt);
   }
