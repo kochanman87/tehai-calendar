@@ -332,6 +332,17 @@ body {
   color: #2563eb;
 }
 
+/* 短納期（リードタイム1〜10） */
+.day-cell.future .lead-time.short-delivery {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+.day-cell.today .lead-time.short-delivery {
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: bold;
+}
+
 /* 他月 */
 .day-cell.other-month {
   opacity: 0.2;
