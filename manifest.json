@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "手配カレンダー",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "手配品の納期リードタイムを営業日数で表示するカレンダー",
   "chrome_url_overrides": {
     "newtab": "newtab.html"
