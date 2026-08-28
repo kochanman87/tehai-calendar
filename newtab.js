@@ -18,8 +18,16 @@ const copyTooltip = document.getElementById('copy-tooltip');
 let seibanList = [];
 let supplierList = [];
 
+// トグル状態と退職プラン
+let countAllDays = false;        // true: 土日祝も暦日で数える
+let showRetirementPlan = false;  // true: 退職プランをカレンダーに表示
+let retirementPlan = null;
+let planRoleMap = new Map();
+
 async function init() {
   await initHolidays();
+  await loadToggleState();
+  refreshRetirementPlan();
 
   renderWeekdayHeader();
   renderCalendar();
@@ -28,6 +36,18 @@ async function init() {
   document.getElementById('next-month').addEventListener('click', goToNextMonth);
   document.getElementById('today-btn').addEventListener('click', goToToday);
   document.getElementById('calendar').addEventListener('wheel', handleWheel, { passive: false });
+
+  // トグル
+  document.getElementById('toggle-count-all').addEventListener('change', (e) => {
+    countAllDays = e.target.checked;
+    saveToggleState();
+    renderCalendar();
+  });
+  document.getElementById('toggle-plan').addEventListener('change', (e) => {
+    showRetirementPlan = e.target.checked;
+    saveToggleState();
+    renderCalendar();
+  });
 
   // 製番パネル
   document.getElementById('seiban-add').addEventListener('click', addSeiban);
@@ -48,7 +68,14 @@ async function init() {
   if (typeof chrome !== 'undefined' && chrome.storage) {
     chrome.storage.onChanged.addListener((changes) => {
       onStorageChanged(changes);
-      if (changes.customHolidays || changes.noDeliveryDays) renderCalendar();
+      // 休日が変わると営業日が変わるのでプランも再計算が必要
+      if (changes.customHolidays || changes.bonusDates || changes.paidLeaveDays) {
+        refreshRetirementPlan();
+      }
+      if (changes.customHolidays || changes.noDeliveryDays ||
+          changes.bonusDates || changes.paidLeaveDays) {
+        renderCalendar();
+      }
       if (changes.seibanList) {
         seibanList = changes.seibanList.newValue || [];
         renderSeibanList();
@@ -103,6 +130,8 @@ function renderCalendar() {
     const d = new Date(currentYear, currentMonth + 1, i);
     calGrid.appendChild(createDayCell(d, false));
   }
+
+  renderPlanNote();
 }
 
 function createDayCell(date, isCurrentMonth) {
@@ -135,6 +164,14 @@ function createDayCell(date, isCurrentMonth) {
     cell.classList.add('no-delivery');
   }
 
+  // 退職プラン
+  const planRole = showRetirementPlan ? planRoleMap.get(formatDateKey(date)) : null;
+  if (planRole) {
+    if (planRole.type === 'retire') cell.classList.add('plan-retire');
+    else if (planRole.type === 'lastwork') cell.classList.add('plan-lastwork');
+    else cell.classList.add('plan-leave');
+  }
+
   // 日付番号
   const dateNum = document.createElement('span');
   dateNum.className = 'date-number';
@@ -144,14 +181,14 @@ function createDayCell(date, isCurrentMonth) {
   dateNum.textContent = date.getDate();
   cell.appendChild(dateNum);
 
-  // リードタイム（営業日のみ表示）
-  if (businessDay || isTodayDate) {
+  // リードタイム（営業日のみ。暦日モードでは全日表示）
+  if (countAllDays || businessDay || isTodayDate) {
     const lt = document.createElement('span');
     lt.className = 'lead-time';
     if (isTodayDate) {
       lt.textContent = '今日';
     } else {
-      const leadTime = calcBusinessDayLeadTime(date);
+      const leadTime = calcLeadTime(date);
       lt.textContent = leadTime > 0 ? `+${leadTime}` : `${leadTime}`;
     }
     cell.appendChild(lt);
@@ -174,10 +211,29 @@ function createDayCell(date, isCurrentMonth) {
     cell.appendChild(ndl);
   }
 
+  // 退職プランのタグ
+  if (planRole) {
+    cell.appendChild(createPlanTag(planRole));
+  }
+
   // クリックでコピー
   cell.addEventListener('click', () => handleDateClick(date, cell));
 
   return cell;
+}
+
+// トグルに応じて営業日／暦日のリードタイムを返す
+function calcLeadTime(targetDate) {
+  return countAllDays
+    ? calcCalendarDayLeadTime(targetDate)
+    : calcBusinessDayLeadTime(targetDate);
+}
+
+// 暦日リードタイム（土日祝も1日として数える）
+function calcCalendarDayLeadTime(targetDate) {
+  const end = new Date(targetDate);
+  end.setHours(0, 0, 0, 0);
+  return Math.round((end.getTime() - today.getTime()) / MS_PER_DAY);
 }
 
 function calcBusinessDayLeadTime(targetDate) {
@@ -274,6 +330,67 @@ function showTooltip(anchor, message) {
   tooltipTimer = setTimeout(() => {
     copyTooltip.className = 'hidden';
   }, 2000);
+}
+
+// === トグル状態・退職プラン ===
+
+async function loadToggleState() {
+  if (!hasStorage) return;
+  const data = await chrome.storage.local.get(['countAllDays', 'showRetirementPlan']);
+  countAllDays = !!data.countAllDays;
+  showRetirementPlan = !!data.showRetirementPlan;
+  document.getElementById('toggle-count-all').checked = countAllDays;
+  document.getElementById('toggle-plan').checked = showRetirementPlan;
+}
+
+async function saveToggleState() {
+  if (!hasStorage) return;
+  await chrome.storage.local.set({ countAllDays, showRetirementPlan });
+}
+
+// 退職プランを再計算し、日付→役割のマップを作り直す
+function refreshRetirementPlan() {
+  retirementPlan = computeRetirementPlan(today);
+  planRoleMap = buildPlanRoleMap(retirementPlan);
+}
+
+function createPlanTag(role) {
+  const tag = document.createElement('span');
+  if (role.type === 'retire') {
+    tag.className = 'plan-tag plan-retire';
+    tag.textContent = '賞与・退職';
+  } else if (role.type === 'lastwork') {
+    tag.className = 'plan-tag plan-lastwork';
+    tag.textContent = '最終出社';
+  } else if (role.index > 0) {
+    tag.className = 'plan-tag plan-leave';
+    tag.textContent = `有給 ${role.index}/${retirementPlan.leaveDays.length}`;
+  } else {
+    // 消化期間中の土日祝（有給は消費しない）
+    tag.className = 'plan-tag plan-leave-off';
+    tag.textContent = '有給期間';
+  }
+  return tag;
+}
+
+// 左パネルの注記と凡例の表示を更新
+function renderPlanNote() {
+  const note = document.getElementById('plan-note');
+  const legend = document.getElementById('plan-legend');
+  const active = showRetirementPlan && retirementPlan;
+
+  legend.classList.toggle('hidden', !active);
+
+  if (active && retirementPlan.expired) {
+    note.textContent =
+      `⚠ 有給を全部消化する最短ラインは過ぎています（最終出社日 ${formatPlanDate(retirementPlan.lastWorkDay)}）。`;
+    note.classList.remove('hidden');
+  } else if (showRetirementPlan && !retirementPlan) {
+    note.textContent = '設定ページでボーナス支給日を登録すると、退職プランを表示します。';
+    note.classList.remove('hidden');
+  } else {
+    note.classList.add('hidden');
+  }
 }
 
 // === 製番パネル ===

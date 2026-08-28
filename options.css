@@ -235,3 +235,123 @@ h1 {
   text-align: center;
   padding: 20px;
 }
+
+/* === 有給・ボーナスタブ === */
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.field-row label {
+  font-size: 14px;
+  color: #555;
+}
+
+.field-row input[type="number"] {
+  width: 90px;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.field-unit {
+  font-size: 14px;
+  color: #666;
+}
+
+.sub-head {
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+  margin: 24px 0 12px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.add-btn-green {
+  background: #16a34a;
+}
+
+.add-btn-green:hover {
+  background: #15803d;
+}
+
+#bonus-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bonus-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #dcfce7;
+  background: #f0fdf4;
+}
+
+.bonus-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: #166534;
+  min-width: 100px;
+  white-space: nowrap;
+}
+
+.bonus-label {
+  flex: 1;
+  font-size: 13px;
+  color: #666;
+}
+
+/* 計算結果 */
+#plan-result {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 16px 18px;
+  font-size: 13px;
+  line-height: 2;
+}
+
+#plan-result.is-empty {
+  background: #f9fafb;
+  border-color: #eee;
+  color: #999;
+  line-height: 1.7;
+}
+
+#plan-result.is-warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.plan-key {
+  display: inline-block;
+  width: 130px;
+  color: #666;
+}
+
+.plan-value {
+  font-weight: 600;
+  color: #166534;
+}
+
+#plan-result.is-warning .plan-value {
+  color: #92400e;
+}
+
+.plan-warning {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #fde68a;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #92400e;
+  font-weight: 500;
+}

@@ -166,7 +166,7 @@ const emptyMsgNoDelivery = document.getElementById('empty-msg-no-delivery');
 
 let noDeliveryDays = [];
 
-async function loadNoDeliveryDays() {
+async function loadNoDeliveryDayList() {
   const data = await chrome.storage.local.get('noDeliveryDays');
   noDeliveryDays = data.noDeliveryDays || [];
   renderNoDeliveryList();
@@ -272,6 +272,169 @@ function deleteNoDeliveryDay(index) {
   renderNoDeliveryList();
 }
 
+// === 有給・ボーナス ===
+const paidLeaveInput = document.getElementById('paid-leave-input');
+const dateInputBonus = document.getElementById('date-input-bonus');
+const labelInputBonus = document.getElementById('label-input-bonus');
+const yearlyCheckBonus = document.getElementById('yearly-check-bonus');
+const addBtnBonus = document.getElementById('add-btn-bonus');
+const bonusListEl = document.getElementById('bonus-list');
+const emptyMsgBonus = document.getElementById('empty-msg-bonus');
+const planResultEl = document.getElementById('plan-result');
+
+const PAID_LEAVE_SAVE_DEBOUNCE_MS = 400;
+
+let bonusDates = [];
+let paidLeaveSaveTimer = null;
+
+async function loadRetirementTab() {
+  const data = await chrome.storage.local.get(['bonusDates', 'paidLeaveDays']);
+  bonusDates = data.bonusDates || [];
+  paidLeaveInput.value = Number(data.paidLeaveDays) || 0;
+  renderBonusList();
+}
+
+async function saveBonusDates() {
+  await chrome.storage.local.set({ bonusDates });
+}
+
+function renderBonusList() {
+  bonusListEl.innerHTML = '';
+
+  if (bonusDates.length === 0) {
+    emptyMsgBonus.classList.remove('hidden');
+    return;
+  }
+
+  emptyMsgBonus.classList.add('hidden');
+
+  // 毎年エントリは月日、単発は日付でソートしたいので表示順は date 文字列基準
+  const sorted = [...bonusDates].sort((a, b) => {
+    if (!!a.yearly !== !!b.yearly) return a.yearly ? -1 : 1;
+    if (a.yearly) return a.date.substring(5).localeCompare(b.date.substring(5));
+    return a.date.localeCompare(b.date);
+  });
+
+  sorted.forEach((item) => {
+    const row = document.createElement('div');
+    row.className = 'bonus-item';
+
+    if (item.yearly) {
+      const badge = document.createElement('span');
+      badge.className = 'yearly-badge';
+      badge.textContent = '毎年';
+      row.appendChild(badge);
+    }
+
+    const dateEl = document.createElement('span');
+    dateEl.className = 'bonus-date';
+    dateEl.textContent = item.yearly ? formatMD(item.date) : item.date;
+    row.appendChild(dateEl);
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'bonus-label';
+    labelEl.textContent = item.label || '';
+    row.appendChild(labelEl);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-btn';
+    delBtn.textContent = '×';
+    delBtn.setAttribute('aria-label', '削除');
+    const origIndex = bonusDates.indexOf(item);
+    delBtn.addEventListener('click', () => deleteBonusDate(origIndex));
+    row.appendChild(delBtn);
+
+    bonusListEl.appendChild(row);
+  });
+}
+
+function addBonusDate() {
+  const date = dateInputBonus.value;
+  if (!date) return;
+
+  const yearly = yearlyCheckBonus.checked;
+
+  // 重複チェック（毎年は月日、単発は日付で判定）
+  const duplicated = bonusDates.some(b => {
+    if (!!b.yearly !== yearly) return false;
+    return yearly ? b.date.substring(5) === date.substring(5) : b.date === date;
+  });
+  if (duplicated) {
+    alert('同じボーナス支給日が既に登録されています。');
+    return;
+  }
+
+  bonusDates.push({ date, label: labelInputBonus.value.trim(), ...(yearly ? { yearly: true } : {}) });
+  saveBonusDates();
+  renderBonusList();
+
+  dateInputBonus.value = '';
+  labelInputBonus.value = '';
+  yearlyCheckBonus.checked = false;
+}
+
+function deleteBonusDate(index) {
+  bonusDates.splice(index, 1);
+  saveBonusDates();
+  renderBonusList();
+}
+
+function onPaidLeaveInput() {
+  if (paidLeaveSaveTimer) clearTimeout(paidLeaveSaveTimer);
+  paidLeaveSaveTimer = setTimeout(async () => {
+    const value = Math.min(999, Math.max(0, parseInt(paidLeaveInput.value, 10) || 0));
+    paidLeaveInput.value = value;
+    await chrome.storage.local.set({ paidLeaveDays: value });
+  }, PAID_LEAVE_SAVE_DEBOUNCE_MS);
+}
+
+// 計算結果の描画（営業日判定に holidays.js のデータが必要）
+function renderPlanResult() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const plan = computeRetirementPlan(today);
+
+  planResultEl.className = '';
+
+  if (!plan) {
+    planResultEl.classList.add('is-empty');
+    planResultEl.textContent = 'ボーナス支給日を登録すると、退職スケジュールを計算します。';
+    return;
+  }
+
+  const rows = [
+    ['対象ボーナス', `${formatPlanDate(plan.bonus.date)}${plan.bonus.label ? '　' + plan.bonus.label : ''}`],
+    ['最終出社日', formatPlanDate(plan.lastWorkDay)],
+    ['有給消化期間', plan.leaveStart
+      ? `${formatPlanDate(plan.leaveStart)} 〜 ${formatPlanDate(plan.retire)}　(${plan.leaveDays.length}営業日)`
+      : 'なし（残り有給0日）'],
+    ['退職日', formatPlanDate(plan.retire)]
+  ];
+
+  planResultEl.innerHTML = '';
+  for (const [key, value] of rows) {
+    const row = document.createElement('div');
+    const k = document.createElement('span');
+    k.className = 'plan-key';
+    k.textContent = key;
+    const v = document.createElement('span');
+    v.className = 'plan-value';
+    v.textContent = value;
+    row.appendChild(k);
+    row.appendChild(v);
+    planResultEl.appendChild(row);
+  }
+
+  if (plan.expired) {
+    planResultEl.classList.add('is-warning');
+    const warn = document.createElement('div');
+    warn.className = 'plan-warning';
+    warn.textContent =
+      '⚠ 最終出社日が今日より前になっています。この支給日に間に合わせて有給を全部消化することはできません。';
+    planResultEl.appendChild(warn);
+  }
+}
+
 // === タブ切り替え ===
 const tabBtns = document.querySelectorAll('.tab-btn');
 const tabContents = document.querySelectorAll('.tab-content');
@@ -297,6 +460,15 @@ endDateInputHolidays.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') addHoliday();
 });
 
+addBtnBonus.addEventListener('click', addBonusDate);
+labelInputBonus.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addBonusDate();
+});
+dateInputBonus.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addBonusDate();
+});
+paidLeaveInput.addEventListener('input', onPaidLeaveInput);
+
 addBtnNoDelivery.addEventListener('click', addNoDeliveryDay);
 labelInputNoDelivery.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') addNoDeliveryDay();
@@ -310,4 +482,16 @@ endDateInputNoDelivery.addEventListener('keydown', (e) => {
 
 // === 初期化 ===
 loadHolidays();
-loadNoDeliveryDays();
+loadNoDeliveryDayList();
+loadRetirementTab();
+
+// 営業日判定に必要な祝日データを読み込んでから計算結果を描画
+initHolidays().then(renderPlanResult);
+
+// 自ページ内の変更も onChanged で拾い、holidays.js 側の状態と計算結果を同期する
+chrome.storage.onChanged.addListener((changes) => {
+  onStorageChanged(changes);
+  if (changes.customHolidays || changes.bonusDates || changes.paidLeaveDays) {
+    renderPlanResult();
+  }
+});

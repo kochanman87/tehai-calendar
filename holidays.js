@@ -11,6 +11,8 @@ let customHolidayEntries = [];    // yearly/range含む全エントリ
 let noDeliveryDaySet = new Set();
 let noDeliveryDayLabels = new Map();
 let noDeliveryDayEntries = [];    // yearly/range含む全エントリ
+let bonusEntries = [];            // ボーナス支給日 [{ date, label, yearly? }]
+let paidLeaveDays = 0;            // 残り有給日数
 let initialized = false;
 
 function formatDateKey(date) {
@@ -102,6 +104,15 @@ async function loadNoDeliveryDays() {
   return noDeliveryDays || [];
 }
 
+async function loadRetirementSettings() {
+  if (!hasStorage) return { bonusDates: [], paidLeaveDays: 0 };
+  const data = await chrome.storage.local.get(['bonusDates', 'paidLeaveDays']);
+  return {
+    bonusDates: data.bonusDates || [],
+    paidLeaveDays: Number(data.paidLeaveDays) || 0
+  };
+}
+
 // エントリリストからSet/Map/配列を構築
 function buildEntryData(list, set, labels, entriesRef) {
   set.clear();
@@ -117,10 +128,11 @@ function buildEntryData(list, set, labels, entriesRef) {
 }
 
 async function initHolidays() {
-  const [apiData, customList, noDeliveryList] = await Promise.all([
+  const [apiData, customList, noDeliveryList, retirement] = await Promise.all([
     fetchAndCacheHolidays(),
     loadCustomHolidays(),
-    loadNoDeliveryDays()
+    loadNoDeliveryDays(),
+    loadRetirementSettings()
   ]);
 
   // API祝日
@@ -133,6 +145,9 @@ async function initHolidays() {
 
   buildEntryData(customList, customHolidaySet, customHolidayLabels, customHolidayEntries);
   buildEntryData(noDeliveryList, noDeliveryDaySet, noDeliveryDayLabels, noDeliveryDayEntries);
+
+  bonusEntries = retirement.bonusDates;
+  paidLeaveDays = retirement.paidLeaveDays;
 
   initialized = true;
 }
@@ -178,6 +193,28 @@ function getNoDeliveryDayLabel(date) {
   return entry ? (entry.label || null) : null;
 }
 
+// === 退職プラン用の設定アクセサ ===
+
+function getBonusEntries() {
+  return bonusEntries;
+}
+
+function getPaidLeaveDays() {
+  return paidLeaveDays;
+}
+
+// "YYYY-MM-DD" → Date（不正な日付・存在しない日付は null）
+function parseDateKey(dateStr) {
+  if (!dateStr) return null;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const dt = new Date(y, m - 1, d);
+  dt.setHours(0, 0, 0, 0);
+  // 2/29 を平年に当てはめた場合などを弾く
+  if (dt.getMonth() !== m - 1 || dt.getDate() !== d) return null;
+  return dt;
+}
+
 // オプションページからの変更をリアルタイム反映
 function onStorageChanged(changes) {
   if (changes.customHolidays) {
@@ -187,5 +224,11 @@ function onStorageChanged(changes) {
   if (changes.noDeliveryDays) {
     const newList = changes.noDeliveryDays.newValue || [];
     buildEntryData(newList, noDeliveryDaySet, noDeliveryDayLabels, noDeliveryDayEntries);
+  }
+  if (changes.bonusDates) {
+    bonusEntries = changes.bonusDates.newValue || [];
+  }
+  if (changes.paidLeaveDays) {
+    paidLeaveDays = Number(changes.paidLeaveDays.newValue) || 0;
   }
 }

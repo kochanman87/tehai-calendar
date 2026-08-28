@@ -12,6 +12,7 @@
     <div id="tab-nav">
       <button class="tab-btn active" data-tab="holidays">カスタム休日</button>
       <button class="tab-btn" data-tab="no-delivery">納品NG日</button>
+      <button class="tab-btn" data-tab="retirement">有給・ボーナス</button>
     </div>
 
     <section id="tab-holidays" class="tab-content active">
@@ -51,7 +52,35 @@
       <div id="no-delivery-list"></div>
       <p id="empty-msg-no-delivery" class="empty-msg hidden">納品NG日はまだ登録されていません。</p>
     </section>
+
+    <section id="tab-retirement" class="tab-content">
+      <p class="desc">残りの有給日数とボーナス支給日を登録すると、ボーナスを受け取ったうえで退職できる最短スケジュールを新しいタブのカレンダーに表示します。</p>
+
+      <div class="field-row">
+        <label for="paid-leave-input">残り有給日数</label>
+        <input type="number" id="paid-leave-input" min="0" max="999" step="1" value="0">
+        <span class="field-unit">日</span>
+      </div>
+
+      <h2 class="sub-head">ボーナス支給日</h2>
+      <div class="add-form">
+        <input type="date" id="date-input-bonus" class="date-input">
+        <input type="text" id="label-input-bonus" placeholder="メモ（任意）" maxlength="30" class="label-input">
+        <label class="yearly-check">
+          <input type="checkbox" id="yearly-check-bonus">
+          <span>毎年</span>
+        </label>
+        <button id="add-btn-bonus" class="add-btn add-btn-green">追加</button>
+      </div>
+      <div id="bonus-list"></div>
+      <p id="empty-msg-bonus" class="empty-msg hidden">ボーナス支給日はまだ登録されていません。</p>
+
+      <h2 class="sub-head">計算結果</h2>
+      <div id="plan-result"></div>
+    </section>
   </div>
+  <script src="holidays.js"></script>
+  <script src="retirement.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

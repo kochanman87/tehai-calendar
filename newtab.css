@@ -404,3 +404,214 @@ body {
 #copy-tooltip.visible {
   opacity: 1;
 }
+
+/* === トグル（左パネル上部） === */
+#toggle-group {
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 2px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-text {
+  font-size: 12.5px;
+  color: #555;
+}
+
+/* 実体のcheckboxは隠してswitchで表現 */
+.toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+  background: #d1d5db;
+  border-radius: 10px;
+  transition: background 0.18s;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.18s;
+}
+
+.toggle-input:checked ~ .switch {
+  background: #2563eb;
+}
+
+.toggle-input:checked ~ .switch::after {
+  transform: translateX(16px);
+}
+
+.toggle-input:checked ~ .toggle-text {
+  color: #1e40af;
+  font-weight: 500;
+}
+
+.toggle-input:focus-visible ~ .switch {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* 退職プランの注記（最短ライン超過の警告など） */
+#plan-note {
+  font-size: 11px;
+  line-height: 1.6;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  border-radius: 6px;
+  padding: 7px 9px;
+  margin-bottom: 12px;
+}
+
+#plan-note.hidden {
+  display: none;
+}
+
+/* === 退職プランのカレンダーハイライト === */
+.plan-tag {
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-top: 3px;
+  padding: 1.5px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* 有給消化期間 */
+.day-cell.plan-leave {
+  background: #fef3c7;
+}
+
+.day-cell.plan-leave.holiday {
+  background: #fdeedd;
+}
+
+.day-cell.plan-leave.no-delivery {
+  background: repeating-linear-gradient(
+    -45deg,
+    #e8ce8a,
+    #e8ce8a 3px,
+    #fef3c7 3px,
+    #fef3c7 6px
+  );
+}
+
+.plan-tag.plan-leave {
+  background: #f59e0b;
+  color: #fff;
+}
+
+/* 消化期間中の土日祝（有給は消費しない） */
+.plan-tag.plan-leave-off {
+  background: #f59e0b;
+  color: #fff;
+  opacity: 0.45;
+}
+
+/* 最終出社日 */
+.day-cell.plan-lastwork {
+  background: #ede9fe;
+  box-shadow: inset 0 0 0 2px #7c3aed;
+}
+
+.plan-tag.plan-lastwork {
+  background: #7c3aed;
+  color: #fff;
+}
+
+/* 賞与支給日＝退職日 */
+.day-cell.plan-retire {
+  background: #dcfce7;
+  box-shadow: inset 0 0 0 2px #16a34a;
+}
+
+.plan-tag.plan-retire {
+  background: #16a34a;
+  color: #fff;
+}
+
+/* 今日セルはプランより青を優先 */
+.day-cell.today.plan-leave,
+.day-cell.today.plan-lastwork,
+.day-cell.today.plan-retire {
+  background: #2563eb;
+  box-shadow: none;
+}
+
+/* プラン該当日は過去でも薄くしない */
+.day-cell.past.plan-leave,
+.day-cell.past.plan-lastwork,
+.day-cell.past.plan-retire {
+  opacity: 1;
+}
+
+.day-cell.past.plan-leave .lead-time,
+.day-cell.past.plan-lastwork .lead-time,
+.day-cell.past.plan-retire .lead-time {
+  color: #999;
+}
+
+/* 凡例 */
+#plan-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #eee;
+  font-size: 11.5px;
+  color: #666;
+}
+
+#plan-legend.hidden {
+  display: none;
+}
+
+#plan-legend i {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin-right: 5px;
+  vertical-align: -1px;
+}
+
+#plan-legend i.lg-lastwork {
+  background: #ede9fe;
+  box-shadow: inset 0 0 0 2px #7c3aed;
+}
+
+#plan-legend i.lg-leave {
+  background: #fef3c7;
+}
+
+#plan-legend i.lg-retire {
+  background: #dcfce7;
+  box-shadow: inset 0 0 0 2px #16a34a;
+}

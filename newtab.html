@@ -8,6 +8,20 @@
 <body>
   <div id="app">
     <div id="seiban-panel" class="side-panel">
+      <div id="toggle-group">
+        <label class="toggle-row">
+          <input type="checkbox" id="toggle-count-all" class="toggle-input">
+          <span class="toggle-text">土日祝を数える</span>
+          <span class="switch"></span>
+        </label>
+        <label class="toggle-row">
+          <input type="checkbox" id="toggle-plan" class="toggle-input">
+          <span class="toggle-text">退職プランを表示</span>
+          <span class="switch"></span>
+        </label>
+      </div>
+      <div id="plan-note" class="hidden"></div>
+
       <h3>製番</h3>
       <div id="seiban-list"></div>
       <div class="panel-input">
@@ -26,6 +40,11 @@
       </header>
       <div id="weekday-header"></div>
       <div id="cal-grid"></div>
+      <div id="plan-legend" class="hidden">
+        <span><i class="lg-lastwork"></i>最終出社日</span>
+        <span><i class="lg-leave"></i>有給消化期間</span>
+        <span><i class="lg-retire"></i>賞与支給日＝退職日</span>
+      </div>
     </div>
 
     <div id="supplier-panel" class="side-panel">
@@ -41,6 +60,7 @@
 
   <div id="copy-tooltip" class="hidden"></div>
   <script src="holidays.js"></script>
+  <script src="retirement.js"></script>
   <script src="newtab.js"></script>
 </body>
 </html>
