@@ -9,6 +9,8 @@ let currentYear = today.getFullYear();
 let currentMonth = today.getMonth();
 let lastWheelTime = 0;
 let tooltipTimer = null;
+let selectedDate = null; // カスタム起点日（null=今日が起点）
+let clickTimer = null; // クリック/ダブルクリック判定用
 
 const monthTitle = document.getElementById('month-title');
 const calGrid = document.getElementById('cal-grid');
@@ -25,8 +27,17 @@ let retirementPlan = null;
 let planRoleMap = new Map();
 
 async function init() {
-  await initHolidays();
-  await loadToggleState();
+  try {
+    await initHolidays();
+  } catch (e) {
+    console.warn('Holiday initialization failed, rendering without holiday data:', e);
+  }
+
+  try {
+    await loadToggleState();
+  } catch (e) {
+    console.warn('Toggle state loading failed:', e);
+  }
   refreshRetirementPlan();
 
   renderWeekdayHeader();
@@ -62,7 +73,11 @@ async function init() {
   });
 
   // storageからデータ読み込み
-  await loadPanelData();
+  try {
+    await loadPanelData();
+  } catch (e) {
+    console.warn('Panel data loading failed:', e);
+  }
 
   // オプションページからの変更をリアルタイム反映
   if (typeof chrome !== 'undefined' && chrome.storage) {
@@ -140,6 +155,8 @@ function createDayCell(date, isCurrentMonth) {
 
   const dow = date.getDay();
   const isTodayDate = date.getTime() === today.getTime();
+  const origin = selectedDate || today;
+  const isOriginDate = date.getTime() === origin.getTime();
   const businessDay = isBusinessDay(date);
   const holidayName = getHolidayName(date);
   const isWeekend = dow === 0 || dow === 6;
@@ -148,9 +165,14 @@ function createDayCell(date, isCurrentMonth) {
 
   if (isTodayDate) {
     cell.classList.add('today');
-  } else if (date < today) {
+  }
+  if (selectedDate && date.getTime() === selectedDate.getTime()) {
+    cell.classList.add('selected');
+  }
+
+  if (date < origin && !isOriginDate) {
     cell.classList.add('past');
-  } else {
+  } else if (date > origin) {
     cell.classList.add('future');
   }
 
@@ -182,14 +204,20 @@ function createDayCell(date, isCurrentMonth) {
   cell.appendChild(dateNum);
 
   // リードタイム（営業日のみ。暦日モードでは全日表示）
-  if (countAllDays || businessDay || isTodayDate) {
+  if (countAllDays || businessDay || isOriginDate) {
     const lt = document.createElement('span');
     lt.className = 'lead-time';
-    if (isTodayDate) {
-      lt.textContent = '今日';
+    if (isOriginDate) {
+      lt.textContent = selectedDate ? '起点' : '今日';
     } else {
       const leadTime = calcLeadTime(date);
-      lt.textContent = leadTime > 0 ? `+${leadTime}` : `${leadTime}`;
+      // 短納期は「10営業日以内」の意味なので暦日モードでは付けない
+      if (!countAllDays && leadTime >= 1 && leadTime <= 10) {
+        lt.textContent = `+${leadTime}(短納期)`;
+        lt.classList.add('short-delivery');
+      } else {
+        lt.textContent = leadTime > 0 ? `+${leadTime}` : `${leadTime}`;
+      }
     }
     cell.appendChild(lt);
   }
@@ -216,8 +244,9 @@ function createDayCell(date, isCurrentMonth) {
     cell.appendChild(createPlanTag(planRole));
   }
 
-  // クリックでコピー
+  // クリックで起点変更、ダブルクリックでコピー
   cell.addEventListener('click', () => handleDateClick(date, cell));
+  cell.addEventListener('dblclick', () => handleDateDblClick(date, cell));
 
   return cell;
 }
@@ -230,14 +259,17 @@ function calcLeadTime(targetDate) {
 }
 
 // 暦日リードタイム（土日祝も1日として数える）
+// 起点は calcBusinessDayLeadTime と同じく selectedDate || today
 function calcCalendarDayLeadTime(targetDate) {
+  const start = new Date(selectedDate || today);
   const end = new Date(targetDate);
+  start.setHours(0, 0, 0, 0);
   end.setHours(0, 0, 0, 0);
-  return Math.round((end.getTime() - today.getTime()) / MS_PER_DAY);
+  return Math.round((end.getTime() - start.getTime()) / MS_PER_DAY);
 }
 
 function calcBusinessDayLeadTime(targetDate) {
-  const start = new Date(today);
+  const start = new Date(selectedDate || today);
   const end = new Date(targetDate);
   start.setHours(0, 0, 0, 0);
   end.setHours(0, 0, 0, 0);
@@ -277,6 +309,7 @@ function goToNextMonth() {
 }
 
 function goToToday() {
+  selectedDate = null;
   currentYear = today.getFullYear();
   currentMonth = today.getMonth();
   renderCalendar();
@@ -293,6 +326,29 @@ function handleWheel(e) {
 }
 
 function handleDateClick(date, cellElement) {
+  // ダブルクリックとの競合回避：少し待ってから起点変更を実行
+  if (clickTimer) clearTimeout(clickTimer);
+  clickTimer = setTimeout(() => {
+    clickTimer = null;
+    const origin = selectedDate || today;
+    if (date.getTime() === origin.getTime()) {
+      // 同じ起点をクリック → 今日に戻す
+      selectedDate = null;
+    } else {
+      selectedDate = new Date(date);
+      selectedDate.setHours(0, 0, 0, 0);
+    }
+    renderCalendar();
+  }, 250);
+}
+
+function handleDateDblClick(date, cellElement) {
+  // ダブルクリック時はシングルクリック（起点変更）をキャンセル
+  if (clickTimer) {
+    clearTimeout(clickTimer);
+    clickTimer = null;
+  }
+
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const dd = String(date.getDate()).padStart(2, '0');
@@ -349,6 +405,7 @@ async function saveToggleState() {
 }
 
 // 退職プランを再計算し、日付→役割のマップを作り直す
+// リードタイムの起点(selectedDate)とは無関係に、常に today 基準で計算する
 function refreshRetirementPlan() {
   retirementPlan = computeRetirementPlan(today);
   planRoleMap = buildPlanRoleMap(retirementPlan);
@@ -537,4 +594,4 @@ function renderSupplierList() {
   });
 }
 
-init();
+init().catch((e) => console.error('init() failed:', e));

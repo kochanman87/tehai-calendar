@@ -94,23 +94,38 @@ async function fetchAndCacheHolidays() {
 
 async function loadCustomHolidays() {
   if (!hasStorage) return [];
-  const { customHolidays } = await chrome.storage.local.get('customHolidays');
-  return customHolidays || [];
+  try {
+    const { customHolidays } = await chrome.storage.local.get('customHolidays');
+    return customHolidays || [];
+  } catch (e) {
+    console.warn('loadCustomHolidays failed:', e);
+    return [];
+  }
 }
 
 async function loadNoDeliveryDays() {
   if (!hasStorage) return [];
-  const { noDeliveryDays } = await chrome.storage.local.get('noDeliveryDays');
-  return noDeliveryDays || [];
+  try {
+    const { noDeliveryDays } = await chrome.storage.local.get('noDeliveryDays');
+    return noDeliveryDays || [];
+  } catch (e) {
+    console.warn('loadNoDeliveryDays failed:', e);
+    return [];
+  }
 }
 
 async function loadRetirementSettings() {
   if (!hasStorage) return { bonusDates: [], paidLeaveDays: 0 };
-  const data = await chrome.storage.local.get(['bonusDates', 'paidLeaveDays']);
-  return {
-    bonusDates: data.bonusDates || [],
-    paidLeaveDays: Number(data.paidLeaveDays) || 0
-  };
+  try {
+    const data = await chrome.storage.local.get(['bonusDates', 'paidLeaveDays']);
+    return {
+      bonusDates: data.bonusDates || [],
+      paidLeaveDays: Number(data.paidLeaveDays) || 0
+    };
+  } catch (e) {
+    console.warn('loadRetirementSettings failed:', e);
+    return { bonusDates: [], paidLeaveDays: 0 };
+  }
 }
 
 // エントリリストからSet/Map/配列を構築
@@ -128,26 +143,30 @@ function buildEntryData(list, set, labels, entriesRef) {
 }
 
 async function initHolidays() {
-  const [apiData, customList, noDeliveryList, retirement] = await Promise.all([
-    fetchAndCacheHolidays(),
-    loadCustomHolidays(),
-    loadNoDeliveryDays(),
-    loadRetirementSettings()
-  ]);
+  try {
+    const [apiData, customList, noDeliveryList, retirement] = await Promise.all([
+      fetchAndCacheHolidays(),
+      loadCustomHolidays(),
+      loadNoDeliveryDays(),
+      loadRetirementSettings()
+    ]);
 
-  // API祝日
-  holidaySet.clear();
-  holidayNames.clear();
-  for (const [dateStr, name] of Object.entries(apiData)) {
-    holidaySet.add(dateStr);
-    holidayNames.set(dateStr, name);
+    // API祝日
+    holidaySet.clear();
+    holidayNames.clear();
+    for (const [dateStr, name] of Object.entries(apiData || {})) {
+      holidaySet.add(dateStr);
+      holidayNames.set(dateStr, name);
+    }
+
+    buildEntryData(customList || [], customHolidaySet, customHolidayLabels, customHolidayEntries);
+    buildEntryData(noDeliveryList || [], noDeliveryDaySet, noDeliveryDayLabels, noDeliveryDayEntries);
+
+    bonusEntries = retirement.bonusDates;
+    paidLeaveDays = retirement.paidLeaveDays;
+  } catch (e) {
+    console.warn('initHolidays failed, calendar will render without holiday data:', e);
   }
-
-  buildEntryData(customList, customHolidaySet, customHolidayLabels, customHolidayEntries);
-  buildEntryData(noDeliveryList, noDeliveryDaySet, noDeliveryDayLabels, noDeliveryDayEntries);
-
-  bonusEntries = retirement.bonusDates;
-  paidLeaveDays = retirement.paidLeaveDays;
 
   initialized = true;
 }
