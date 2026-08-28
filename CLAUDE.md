@@ -55,6 +55,12 @@ tehai-calendar/
 - `storage`: 各種データの永続保存
 - `host_permissions`: `https://holidays-jp.github.io/*`（祝日API）
 
+## Git運用
+- **main への直接 push はしない。必ずブランチを切って PR 経由でマージする。**
+- 作業前に `git fetch` して `main` が最新か確認する（リモートに先行コミットがある状態で
+  作業を始めると、同じファイルを触る競合解決が後から必要になる）。
+- リリース時は `manifest.json` の version を semver で更新し、`v<version>` のタグを打つ。
+
 ## 開発メモ
 - ホイールイベントは `passive: false` 指定（ChromeデフォルトのpassiveだとpreventDefaultが無効）
 - 祝日データは `Set<"YYYY-MM-DD">` で O(1) 判定（単一日付）。yearly/rangeエントリは配列走査
