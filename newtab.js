@@ -415,7 +415,7 @@ function createPlanTag(role) {
   const tag = document.createElement('span');
   if (role.type === 'retire') {
     tag.className = 'plan-tag plan-retire';
-    tag.textContent = '賞与・退職';
+    tag.textContent = '賞与支給日';
   } else if (role.type === 'lastwork') {
     tag.className = 'plan-tag plan-lastwork';
     tag.textContent = '最終出社';
