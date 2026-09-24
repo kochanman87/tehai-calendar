@@ -415,7 +415,7 @@ function createPlanTag(role) {
   const tag = document.createElement('span');
   if (role.type === 'retire') {
     tag.className = 'plan-tag plan-retire';
-    tag.textContent = '賞与・退職';
+    tag.textContent = '賞与支給日';
   } else if (role.type === 'lastwork') {
     tag.className = 'plan-tag plan-lastwork';
     tag.textContent = '最終出社';
@@ -443,7 +443,7 @@ function renderPlanNote() {
       `⚠ 有給を全部消化する最短ラインは過ぎています（最終出社日 ${formatPlanDate(retirementPlan.lastWorkDay)}）。`;
     note.classList.remove('hidden');
   } else if (showRetirementPlan && !retirementPlan) {
-    note.textContent = '設定ページでボーナス支給日を登録すると、退職プランを表示します。';
+    note.textContent = '設定ページでボーナス支給日を登録すると、有給計画を表示します。';
     note.classList.remove('hidden');
   } else {
     note.classList.add('hidden');

@@ -398,7 +398,7 @@ function renderPlanResult() {
 
   if (!plan) {
     planResultEl.classList.add('is-empty');
-    planResultEl.textContent = 'ボーナス支給日を登録すると、退職スケジュールを計算します。';
+    planResultEl.textContent = 'ボーナス支給日を登録すると、有給計画を計算します。';
     return;
   }
 
@@ -407,8 +407,7 @@ function renderPlanResult() {
     ['最終出社日', formatPlanDate(plan.lastWorkDay)],
     ['有給消化期間', plan.leaveStart
       ? `${formatPlanDate(plan.leaveStart)} 〜 ${formatPlanDate(plan.retire)}　(${plan.leaveDays.length}営業日)`
-      : 'なし（残り有給0日）'],
-    ['退職日', formatPlanDate(plan.retire)]
+      : 'なし（残り有給0日）']
   ];
 
   planResultEl.innerHTML = '';
